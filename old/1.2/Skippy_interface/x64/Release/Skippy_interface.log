@@ -1,0 +1,12 @@
+﻿  dllmain.cpp
+  CameraDevice.cpp
+C:\Users\Snow\source\repos\Skippy\Skippy_interface\Sony\CameraDevice.cpp(539,20): warning C4066: characters beyond first in wide-character constant ignored
+  ConnectionInfo.cpp
+  PropertyValueTable.cpp
+  Text.cpp
+     Creating library C:\Users\Snow\source\repos\Skippy\Skippy_interface\x64\Release\Skippy_interface.lib and object C:\Users\Snow\source\repos\Skippy\Skippy_interface\x64\Release\Skippy_interface.exp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 554 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  Skippy_interface.vcxproj -> C:\Users\Snow\source\repos\Skippy\Skippy_interface\x64\Release\Skippy_interface.dll

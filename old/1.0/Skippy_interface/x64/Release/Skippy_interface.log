@@ -1,0 +1,9 @@
+﻿  CameraDevice.cpp
+C:\Users\schneidl.WSL\source\repos\Skippy_interface\Sony\CameraDevice.cpp(538,20): warning C4066: characters beyond first in wide-character constant ignored
+     Creating library C:\Users\schneidl.WSL\source\repos\Skippy_interface\x64\Release\Skippy_interface.lib and object C:\Users\schneidl.WSL\source\repos\Skippy_interface\x64\Release\Skippy_interface.exp
+  Generating code
+  4 of 561 functions ( 0.7%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  Skippy_interface.vcxproj -> C:\Users\schneidl.WSL\source\repos\Skippy_interface\x64\Release\Skippy_interface.dll

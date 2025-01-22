@@ -1,0 +1,204 @@
+#include <Adafruit_NeoPixel.h>
+
+# define EN 8 // stepper motor enable , active low
+# define ENDSTOP 9 // 
+# define X_DIR 5 // X -axis stepper motor direction control
+# define X_STP 2 // x -axis stepper control
+# define Z1_STP 3
+# define Z2_STP 4
+# define Z1_DIR 6
+# define Z2_DIR 7
+#define LED_PIN 13
+#define LED_COUNT 56
+
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGBW + NEO_KHZ800);
+
+int X = 0;
+int Z = 0;
+const byte numChars = 32;
+char receivedChars[numChars];   // an array to store the received data
+boolean newData = false;
+int dataNumber = 0;             // new for this version
+bool dir;
+bool dirz;
+bool zero = false;
+
+
+void LED(int brightness) {
+  strip.fill(strip.Color(0,0,0,brightness));
+  strip.show();
+}
+
+void moveparts()
+{
+  if (X!=0){
+    //digitalWrite (EN, LOW);
+    if(dir){
+      digitalWrite(X_DIR, true);
+    }
+    else{
+      digitalWrite(X_DIR, false);
+    }
+    delay (50);
+    digitalWrite (X_STP, HIGH);
+    delayMicroseconds (200);
+    digitalWrite (X_STP, LOW);
+    delayMicroseconds (200);
+    if(digitalRead(ENDSTOP)==true){
+      X=0;
+    }
+    //digitalWrite (EN, HIGH);
+  }
+  if(Z!=0){
+  digitalWrite (EN, LOW);
+    if(dirz){
+      digitalWrite(Z1_DIR, true);
+      digitalWrite(Z2_DIR, true);
+    }
+    else{
+      digitalWrite(Z1_DIR, false);
+      digitalWrite(Z2_DIR, false);
+    }
+    delay (50);
+    digitalWrite (Z1_STP, HIGH);
+    digitalWrite (Z2_STP, HIGH);
+    delayMicroseconds (200);
+    digitalWrite (Z1_STP, LOW);
+    digitalWrite (Z2_STP, LOW);
+    delayMicroseconds (200);
+    digitalWrite (EN, HIGH);
+  }
+}
+
+void back()
+{
+  if (zero==true){
+    if(digitalRead(ENDSTOP)==false){
+    digitalWrite (EN, LOW);
+    digitalWrite(X_DIR, false);
+    delay (50);
+    digitalWrite (X_STP, HIGH);
+    delayMicroseconds (200);
+    digitalWrite (X_STP, LOW);
+    delayMicroseconds (200);
+    }
+    else{
+      zero=false;
+    }
+    digitalWrite (EN, HIGH);
+  }
+}
+
+void setup () {   // The stepper motor used in the IO pin is set to output
+    Serial.begin(9600);
+    
+    //Initalize pins
+    pinMode (X_DIR, OUTPUT); 
+    pinMode (X_STP, OUTPUT);
+    
+    pinMode (Z1_DIR, OUTPUT); 
+    pinMode (Z1_STP, OUTPUT);
+    
+    pinMode (Z2_DIR, OUTPUT); 
+    pinMode (Z2_STP, OUTPUT);
+    
+    pinMode (EN, OUTPUT);
+    pinMode (ENDSTOP, INPUT);
+    digitalWrite(ENDSTOP, HIGH);  // turn on pullup resistor
+
+    //Enable CNC Shield
+    digitalWrite (EN, HIGH);
+
+    strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+    strip.show();            // Turn OFF all pixels ASAP
+    strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
+    LED(0);
+    digitalWrite (EN, LOW);
+}
+
+void recvWithEndMarker() {
+    static byte ndx = 0;
+    char endMarker = '\n';
+    char rc;
+   
+    if (Serial.available() > 0) {
+        rc = Serial.read();
+
+        if (rc != endMarker) {
+            receivedChars[ndx] = rc;
+            ndx++;
+            if (ndx >= numChars) {
+                ndx = numChars - 1;
+            }
+        }
+
+        else {
+            receivedChars[ndx] = '\0'; // terminate the string
+            ndx = 0;
+            newData = true;
+        }
+    }
+    if (newData == true) {
+        if(strstr(receivedChars,"Arduino?")!=NULL){
+          Serial.println("Arduino!");
+          newData = false;
+          }
+          else if(strstr(receivedChars,"Stop")!=NULL){
+          X=0;
+          Z=0;
+          newData = false;
+          Serial.println("Stop");
+          }
+          else if(strstr(receivedChars,"Back")!=NULL){
+          zero=true;
+          newData = false;
+          }
+          else if(strstr(receivedChars,"Height")!=NULL){
+          dataNumber = 0;             // new for this version
+          dataNumber = atoi(receivedChars+6);
+          Serial.print("Moving ");    // new for this version
+          Serial.print(dataNumber);     // new for this version
+          Serial.println(" mm in Height");
+          if (dataNumber > 0){
+            dirz = true;
+          }
+          else{
+            dirz = false;
+          }
+          Z=dataNumber*800;
+          newData = false;
+          }
+          else if(strstr(receivedChars,"LED")!=NULL){
+          dataNumber = 0;             // new for this version
+          dataNumber = atoi(receivedChars+3);
+          LED(dataNumber);
+          newData = false;
+          }
+          else {
+              dataNumber = 0;             // new for this version
+              dataNumber = atoi(receivedChars);   // new for this version
+              Serial.print("Moving ");    // new for this version
+              Serial.print(dataNumber);     // new for this version
+              Serial.println(" mm");
+              if (dataNumber > 0){
+                dir = true;
+              }
+              else{
+                dir = false;
+              }
+              X=dataNumber*200;
+              newData = false;
+              //Serial.println(X);
+          }
+    }    
+}
+
+void loop () {
+    recvWithEndMarker();
+    moveparts();
+    back();
+    //Serial.println(digitalRead(ENDSTOP));
+
+
+
+} 

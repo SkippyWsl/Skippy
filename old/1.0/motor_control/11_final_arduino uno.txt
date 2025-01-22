@@ -1,0 +1,235 @@
+#include <Adafruit_NeoPixel.h>
+
+// The following is a simple stepper motor control procedures
+# define EN 8 // stepper motor enable , active low
+# define ENDSTOP 9 // x -axis endstops 
+# define X_DIR 5 // X -axis stepper motor direction control
+# define X_STP 2 // x -axis stepper control
+# define Z1_STP 3 //z -axis stepper contro
+# define Z2_STP 4 //z -axis stepper contro
+# define Z1_DIR 6 //z -axis stepper motor direction control
+# define Z2_DIR 7 //z -axis stepper motor direction control
+#define LED_PIN 13 // top Led control
+#define LED_PIN1 12 // bottom Led control
+#define LED_COUNT 56 //nr led top
+#define LED_COUNT1 37 //nr led bottom
+
+//initialize neopixel strips
+Adafruit_NeoPixel strip_top(LED_COUNT, LED_PIN, NEO_RGBW + NEO_KHZ800);    
+Adafruit_NeoPixel strip_bottom(LED_COUNT1, LED_PIN1, NEO_RGBW + NEO_KHZ800);
+
+//initialize variables
+int no_steps;
+const byte numChars = 32;
+char receivedChars[numChars];   // an array to store the received data
+boolean newData = false;
+int dataNumber = 0;             // new for this version
+bool dir;
+
+// change brightness ( white only) of top and bottom led strips
+void LED_top(int brightness) {
+  strip_top.fill(strip_top.Color(0,0,0,brightness));
+  strip_top.show();
+}
+void LED_bottom(int brightness) {
+  strip_bottom.fill(strip_bottom.Color(0,0,0,brightness));
+  strip_bottom.show();
+}
+
+//move table in direction X by Y steps
+void step (bool dir, int no_steps)
+{
+  digitalWrite (EN, LOW);
+    if(dir){
+      digitalWrite(X_DIR, true);
+    }
+    else {
+      digitalWrite(X_DIR, false);
+    }
+    delay (50);
+    for (int i = 0; i < (abs(no_steps)*200); i++) {
+      if(digitalRead(ENDSTOP)==true){
+        digitalWrite (X_STP, HIGH);
+        delayMicroseconds (200);
+        digitalWrite (X_STP, LOW);
+        delayMicroseconds (200);
+      }
+      else {
+      Serial.println("Stop");
+      digitalWrite(X_DIR, !digitalRead(X_DIR));
+      delay (50);
+      for (int i = 0; i < 200; i++){
+        digitalWrite (X_STP, HIGH);
+        delayMicroseconds (200);
+        digitalWrite (X_STP, LOW);
+        delayMicroseconds (200);
+      }
+      break;
+      }
+    }
+  digitalWrite (EN, HIGH);
+}
+
+//move camera in direction X by Y steps
+void movez(bool dir, int no_steps)
+{
+  digitalWrite (EN, LOW);
+    if(dir){
+      digitalWrite(Z1_DIR, true);
+      digitalWrite(Z2_DIR, true);
+    }
+    else{
+      digitalWrite(Z1_DIR, false);
+      digitalWrite(Z2_DIR, false);
+    }
+    delay (50);
+    for (int i = 0; i < (abs(no_steps)*800); i++) 
+    {
+        digitalWrite (Z1_STP, HIGH);
+        digitalWrite (Z2_STP, HIGH);
+        delayMicroseconds (200);
+        digitalWrite (Z1_STP, LOW);
+        digitalWrite (Z2_STP, LOW);
+        delayMicroseconds (200);
+    }
+  digitalWrite (EN, HIGH);
+}
+
+//go back all the way until endstop
+void back(){
+  digitalWrite (EN, LOW); //enable shield
+  digitalWrite(X_DIR, false); // go backwards
+  delay (50);
+  while (digitalRead(ENDSTOP)==true){
+        digitalWrite (X_STP, HIGH);
+        delayMicroseconds (200);
+        digitalWrite (X_STP, LOW);
+        delayMicroseconds (200);
+      }
+  digitalWrite(X_DIR, true); // go forward
+  delay (50);
+  for (int i = 0; i < 200; i++){
+      digitalWrite (X_STP, HIGH);
+      delayMicroseconds (200);
+      digitalWrite (X_STP, LOW);
+      delayMicroseconds (200);
+    }
+  digitalWrite (EN, HIGH); //disable shield
+}
+
+// initialize 
+void setup () {   
+    Serial.begin(9600);
+    
+    //Initalize pins
+    pinMode (X_DIR, OUTPUT); 
+    pinMode (X_STP, OUTPUT);
+    
+    pinMode (Z1_DIR, OUTPUT); 
+    pinMode (Z1_STP, OUTPUT);
+    
+    pinMode (Z2_DIR, OUTPUT); 
+    pinMode (Z2_STP, OUTPUT);
+    
+    pinMode (EN, OUTPUT);
+    pinMode (ENDSTOP, INPUT);
+    digitalWrite(ENDSTOP, HIGH);  // turn on pullup resistor
+
+    //Enable CNC Shield
+    digitalWrite (EN, HIGH);
+
+    strip_top.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+    strip_top.show();            // Turn OFF all pixels ASAP
+    
+    strip_bottom.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+    strip_bottom.show();            // Turn OFF all pixels ASAP
+    LED_top(0);
+    LED_bottom(0);
+}
+
+//read serial
+void recvWithEndMarker() {
+    static byte ndx = 0;
+    char endMarker = '\n';
+    char rc;
+   
+    if (Serial.available() > 0) {
+        rc = Serial.read();
+
+        if (rc != endMarker) {
+            receivedChars[ndx] = rc;
+            ndx++;
+            if (ndx >= numChars) {
+                ndx = numChars - 1;
+            }
+        }
+
+        else {
+            receivedChars[ndx] = '\0'; // terminate the string
+            ndx = 0;
+            newData = true;
+        }
+    } 
+}
+
+//get instruction from serial
+void showNewNumber() {
+    if (newData == true) {
+        if(strstr(receivedChars,"Arduino?")!=NULL){
+          Serial.println("Arduino!");
+          newData = false;
+          }
+          else if(strstr(receivedChars,"Back")!=NULL){
+          back();//go back until endstop
+          newData = false;
+          }
+          else if(strstr(receivedChars,"Height")!=NULL){
+          dataNumber = 0;             // new for this version
+          dataNumber = atoi(receivedChars+6);
+          Serial.print("Moving ");    // new for this version
+          Serial.print(dataNumber);     // new for this version
+          Serial.println(" mm in Height");
+          if (dataNumber > 0){
+            dir = true;
+          }
+          else{
+            dir = false;
+          }
+          movez(dir, dataNumber);
+          newData = false;
+          }
+          else if(strstr(receivedChars,"LEDT")!=NULL){
+          dataNumber = 0;             // new for this version
+          dataNumber = atoi(receivedChars+4);
+          LED_top(dataNumber);
+          newData = false;
+          }
+          else if(strstr(receivedChars,"LEDB")!=NULL){
+          dataNumber = 0;             // new for this version
+          dataNumber = atoi(receivedChars+4);
+          LED_bottom(dataNumber);
+          newData = false;
+          }
+          else {
+              dataNumber = 0;             // new for this version
+              dataNumber = atoi(receivedChars);   // new for this version
+              Serial.print("Moving ");    // new for this version
+              Serial.print(dataNumber);     // new for this version
+              Serial.println(" mm");
+              if (dataNumber > 0){
+                dir = true;
+              }
+              else{
+                dir = false;
+              }
+              step(dir, dataNumber);
+              newData = false;
+          }
+    }
+}
+
+//main function
+void loop () {
+    recvWithEndMarker();
+    showNewNumber();
+} 

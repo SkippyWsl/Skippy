@@ -1,0 +1,2 @@
+C:\Users\schneidl.WSL\source\repos\Skippy_interface\x64\Release\Skippy_interface.dll
+C:\Users\Snow\source\repos\Skippy\Skippy_interface\x64\Release\Skippy_interface.dll
